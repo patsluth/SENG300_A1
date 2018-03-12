@@ -16,6 +16,7 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.AnnotationTypeDeclaration;
 import org.eclipse.jdt.core.dom.EnumDeclaration;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
+import org.eclipse.jdt.core.dom.PackageDeclaration;
 import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 
@@ -24,6 +25,7 @@ public class Main {
 	private static int declarationCount = 0;
 	private static int referenceCount = 0;
 	private static String typeName;
+	private static String packageName; 
 
 	public static void main(String[] args) {	
 		
@@ -66,9 +68,10 @@ public class Main {
 			if (!extension.toLowerCase().equals("java")) 
 				continue; // prevent trying to parse a non .java file
 			
-			try {
+			try {	
 				String source = readFile(file);
-				System.out.println("Reading file: " + file.getPath());
+				
+				//System.out.println("Reading file: " + file.getPath());
 	
 				parser.setSource(source.toCharArray());
 				
@@ -77,6 +80,8 @@ public class Main {
 				parser.setCompilerOptions(options);
 	
 				CompilationUnit rootNode = (CompilationUnit) parser.createAST(null);
+				
+				packageName = ""; // reset the package name before parsing next file
 				
 				rootNode.accept(new DeclarationVisitor()); 
 				
@@ -87,7 +92,7 @@ public class Main {
 						String typeName = type.toString();
 						
 						if (filteredTypeName == null || typeName.equals(filteredTypeName)) {
-							System.out.println("\t" + typeName);
+							//System.out.println("\t" + typeName);
 							referenceCount++; 
 						}
 					}
@@ -118,12 +123,20 @@ public class Main {
 	
 	static class DeclarationVisitor extends ASTVisitor{
 		
+		public boolean visit(PackageDeclaration node) {
+			packageName = node.getName().getFullyQualifiedName(); 
+			return true; 
+		}
+		
 		public boolean visit(AnnotationTypeDeclaration node) {
 			String name = node.getName().getFullyQualifiedName();
-			System.out.println(name);
-			if (!name.equals(typeName))
-				return true; 
-			System.out.println("Found: AnnotationTypeDeclaration");
+			String fqn; // fully qualified name
+			if (!packageName.equals(""))
+				fqn = packageName + "." + name;
+			else
+				fqn = name; 
+			if (!fqn.equals(typeName))
+				return true;
 			declarationCount++; 
 			return true; 
 		}
@@ -131,23 +144,26 @@ public class Main {
 		
 		public boolean visit(EnumDeclaration node) {
 			String name = node.getName().getFullyQualifiedName();
-			System.out.println(name);
-			if (!name.equals(typeName))
+			String fqn; // fully qualified name
+			if (!packageName.equals(""))
+				fqn = packageName + "." + name;
+			else
+				fqn = name; 
+			if (!fqn.equals(typeName))
 				return true; 
-			System.out.println("Found: EnumDeclaration");
 			declarationCount++; 
 			return true; 
 		}
 		
 		public boolean visit(TypeDeclaration node) {
 			String name = node.getName().getFullyQualifiedName();
-			System.out.println(name);
-			if (!name.equals(typeName))
-				return true; 
-			if (node.isInterface())
-				System.out.println("Found: InterfaceDeclaration");
+			String fqn; // fully qualified name
+			if (!packageName.equals(""))
+				fqn = packageName + "." + name;
 			else
-				System.out.println("Found: ClassDeclaration");
+				fqn = name; 
+			if (!fqn.equals(typeName))
+				return true; 
 			declarationCount++; 
 			return true; 
 		}
