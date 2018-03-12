@@ -55,6 +55,17 @@ public class Main {
 		parser.setKind(ASTParser.K_COMPILATION_UNIT);
 	
 		for (File file : directoryFile.listFiles()) {
+			
+			if (file.isDirectory())
+				continue; // prevent trying to parse a sub-directory
+			
+			String filename = file.getName();
+			String[] parts = filename.split("\\.");
+			String extension = parts[parts.length - 1]; 
+			
+			if (!extension.toLowerCase().equals("java")) 
+				continue; // prevent trying to parse a non .java file
+			
 			try {
 				String source = readFile(file);
 				System.out.println("Reading file: " + file.getPath());
