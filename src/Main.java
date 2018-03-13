@@ -10,6 +10,7 @@ import java.util.Scanner;
 
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.AST;
+import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.CompilationUnit;
@@ -124,48 +125,71 @@ public class Main {
 	static class DeclarationVisitor extends ASTVisitor{
 		
 		public boolean visit(PackageDeclaration node) {
-			packageName = node.getName().getFullyQualifiedName(); 
+			packageName = node.getName().toString();
 			return true; 
 		}
 		
 		public boolean visit(AnnotationTypeDeclaration node) {
-			String name = node.getName().getFullyQualifiedName();
-			String fqn; // fully qualified name
-			if (!packageName.equals(""))
-				fqn = packageName + "." + name;
-			else
-				fqn = name; 
+			
+			String simpleName = node.getName().toString();
+			String fqn = getFQN(node, simpleName); 
+			
 			if (!fqn.equals(typeName))
-				return true;
-			declarationCount++; 
-			return true; 
+				return true; 
+			declarationCount++; // only increment counter if the fqn equals the typeName
+			return true;
 		}
 		
 		
 		public boolean visit(EnumDeclaration node) {
-			String name = node.getName().getFullyQualifiedName();
-			String fqn; // fully qualified name
-			if (!packageName.equals(""))
-				fqn = packageName + "." + name;
-			else
-				fqn = name; 
+			
+			String simpleName = node.getName().toString();
+			String fqn = getFQN(node, simpleName); 
+			
 			if (!fqn.equals(typeName))
 				return true; 
-			declarationCount++; 
+			declarationCount++; // only increment counter if the fqn equals the typeName
 			return true; 
 		}
 		
 		public boolean visit(TypeDeclaration node) {
-			String name = node.getName().getFullyQualifiedName();
-			String fqn; // fully qualified name
-			if (!packageName.equals(""))
-				fqn = packageName + "." + name;
-			else
-				fqn = name; 
+			
+			String simpleName = node.getName().toString();
+			String fqn = getFQN(node, simpleName); 
+			
 			if (!fqn.equals(typeName))
 				return true; 
-			declarationCount++; 
+			declarationCount++; // only increment counter if the fqn equals the typeName
 			return true; 
+		}
+		
+		
+		private String getFQN(ASTNode node, String simpleName) {
+			
+			String fqn = simpleName; // init fqn as inner class/interface simple name
+			
+			ASTNode parent = node.getParent(); // get either an outer class/interface/enum/annotation or the comp. unit
+			int parentType = parent.getNodeType(); 
+			while (true) { // keep appending the outer class/interface/enum/annotation names to fqn
+				String parentName; 
+				if (parentType == ASTNode.ANNOTATION_TYPE_DECLARATION)
+					parentName = ((AnnotationTypeDeclaration) parent).getName().toString();
+				else if (parentType == ASTNode.ENUM_DECLARATION)
+					parentName = ((EnumDeclaration) parent).getName().toString();
+				else if (parentType == ASTNode.TYPE_DECLARATION)
+					parentName = ((TypeDeclaration) parent).getName().toString();
+				else
+					break; 
+				
+				fqn = parentName + "." + fqn;
+				parent = parent.getParent(); // move up one parent level
+				parentType = parent.getNodeType(); // get type of new parent
+			}
+
+			if (!packageName.equals(""))
+				fqn = packageName + "." + fqn; // append the package name to front if one was explicitly declared
+			
+			return fqn; 
 		}
 		
 	}
