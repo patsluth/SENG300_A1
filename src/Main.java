@@ -48,7 +48,7 @@ public class Main {
 
 	}
 	
-	private static boolean parse(String directoryPath, String filteredTypeName) { 
+	public static boolean parse(String directoryPath, String filteredTypeName) { 
 		
 		File directoryFile = new File(directoryPath);
 		if (!directoryFile.isDirectory()) {
@@ -73,8 +73,6 @@ public class Main {
 			
 			try {	
 				String source = readFile(file);
-				
-				//System.out.println("Reading file: " + file.getPath());
 	
 				parser.setSource(source.toCharArray());
 				
@@ -86,27 +84,11 @@ public class Main {
 				
 				packageName = ""; // reset the package name before parsing next file
 				
-				decFQNS.clear(); // reset
+				decFQNS.clear(); // reset list of declarations found in the file
 				
 				rootNode.accept(new DeclarationVisitor()); 
 				
-				System.out.println(decFQNS.size());
-				
 				rootNode.accept(new FieldDeclarationVisitor());
-				/*
-				rootNode.accept(new FieldDeclarationVisitor(new FieldDeclarationVisitor.Listener() {
-					@Override
-					public void didVisitNodeOfType(Type type) 
-					{
-						String typeName = type.toString();
-						
-						if (filteredTypeName == null || typeName.equals(filteredTypeName)) {
-							//System.out.println("\t" + typeName);
-							referenceCount++; 
-						}
-					}
-				}));
-				*/
 				
 			} catch (FileNotFoundException e) {
 				System.out.println("Failed to read file: " + file.getPath());
@@ -117,7 +99,7 @@ public class Main {
 		return true; 
 	}	
 
-	private static String readFile(File file) throws FileNotFoundException
+	public static String readFile(File file) throws FileNotFoundException
 	{
 	    Scanner scanner = new Scanner(file);
 	    String source = "";
@@ -143,6 +125,7 @@ public class Main {
 			String simpleName = node.getName().toString();
 			String fqn = getFQN(node, simpleName); 
 			
+			decFQNS.add(fqn);
 			
 			if (!fqn.equals(typeName))
 				return true; 
@@ -155,6 +138,8 @@ public class Main {
 			
 			String simpleName = node.getName().toString();
 			String fqn = getFQN(node, simpleName); 
+			
+			decFQNS.add(fqn);
 			
 			if (!fqn.equals(typeName))
 				return true; 
@@ -175,9 +160,6 @@ public class Main {
 			return true; 
 		}
 		
-		
-		
-		
 		private String getFQN(ASTNode node, String simpleName) {
 			
 			String fqn = simpleName; // init fqn as inner class/interface simple name
@@ -194,7 +176,6 @@ public class Main {
 					parentName = ((TypeDeclaration) parent).getName().toString();
 				else
 					break; 
-				
 				fqn = parentName + "." + fqn;
 				parent = parent.getParent(); // move up one parent level
 				parentType = parent.getNodeType(); // get type of new parent
@@ -210,68 +191,33 @@ public class Main {
 	
 	static class FieldDeclarationVisitor extends ASTVisitor
 	{	
-		/*
-		interface Listener
-		{
-			void didVisitNodeOfType(Type type);
-		}
 		
-		private FieldDeclarationVisitor.Listener listener = null;
-		
-		
-		public FieldDeclarationVisitor(FieldDeclarationVisitor.Listener listener) 
-		{
-			this.listener = listener;
-		}
-		*/
-		
-		@Override
 		public boolean visit(FieldDeclaration node) 
 		{
-			/*
-			String typeName = node.getType().toString();
-			boolean attachedConstructor = false; 
-			List fragments = node.fragments();
-			System.out.println(node.fragments().size());
-			for (Object o: fragments) {
-				System.out.println(o.toString());
-			}
-			*/
 			
-			String typeName = node.getType().toString();
-			System.out.println("refname:     " +typeName);
+			String refName = node.getType().toString();
 			
 			for(int i = 0; i < decFQNS.size(); i++) {
 				String fqn = decFQNS.get(i);
-				//System.out.println(fqn);
 				String[] parts = fqn.split("\\.");
-				//System.out.println("end: " +parts[parts.length-1]);
-				if (parts[parts.length-1].equals(typeName)){
-					typeName = fqn; 
+				String className = parts[parts.length-1]; 
+				if (className.equals(refName)) {
+					refName = fqn; 
 					break; 
 				}
 			}
 			
-			System.out.println("fqn: " +typeName);
-			if (typeName.equals(Main.typeName))
-				referenceCount++; 
+			if (refName.equals(typeName)) {
+				referenceCount++;
+				// now check for any constructor:
+				List fragments = node.fragments();
+				if (fragments.size() > 0) {
+					if (fragments.get(0).toString().contains("new"))
+						referenceCount++; 
+				}
+			} 
 			
-			
-//			if (fragments.size() > 0) {
-//				if (fragments.get(0).toString().contains(typeName)) {
-//					
-//					System.out.println(node.fragments().get(0));
-//					attachedConstructor = true;
-//					System.out.println("CONSTRUCTOR FOUND!");
-//				}
-//			}
-			/*
-			if (this.listener != null) {
-				this.listener.didVisitNodeOfType(node.getType());
-			}
-			*/
-			
-			return super.visit(node);
+			return true;
 		}
 	}
 
