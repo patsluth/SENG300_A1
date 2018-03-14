@@ -1,6 +1,6 @@
 // 	SENG 300 Group 14 - Project #1
-//	Pat Sluth : 30032750
-//	Preston : 10043064
+//	Pat Sluth: 30032750
+//	Preston Haffey: 10043064
 //	Aaron Hornby: 10176084
 
 import java.io.File;
@@ -19,6 +19,7 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.AnnotationTypeDeclaration;
 import org.eclipse.jdt.core.dom.EnumDeclaration;
 import org.eclipse.jdt.core.dom.FieldDeclaration;
+import org.eclipse.jdt.core.dom.ImportDeclaration;
 import org.eclipse.jdt.core.dom.PackageDeclaration;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 
@@ -28,6 +29,7 @@ public class Main {
 	private static int referenceCount = 0;
 	private static String typeName;
 	private static String packageName;
+	private static String importName;
 	private static List<String> decFQNS = new ArrayList<String>(); 
 
 	public static void main(String[] args) {	
@@ -86,6 +88,8 @@ public class Main {
 				
 				decFQNS.clear(); // reset list of declarations found in the file
 				
+				importName = ""; // reset import name before parsing next file
+				
 				rootNode.accept(new DeclarationVisitor()); 
 				
 				rootNode.accept(new FieldDeclarationVisitor());
@@ -118,6 +122,15 @@ public class Main {
 		public boolean visit(PackageDeclaration node) {
 			packageName = node.getName().toString();
 			return true; 
+		}
+		
+		public boolean visit(ImportDeclaration node) {
+			String name = node.getName().toString();
+			if (name.equals(typeName)) {
+				String[] parts = name.split("\\.");
+				importName = parts[parts.length-1]; 
+			}
+			return true;
 		}
 		
 		public boolean visit(AnnotationTypeDeclaration node) {
@@ -207,7 +220,7 @@ public class Main {
 				}
 			}
 			
-			if (refName.equals(typeName)) {
+			if (refName.equals(typeName) || (!importName.equals("") && refName.equals(importName))) {
 				referenceCount++;
 				// now check for any constructor:
 				List fragments = node.fragments();
