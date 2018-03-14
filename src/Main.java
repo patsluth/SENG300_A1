@@ -25,8 +25,8 @@ import org.eclipse.jdt.core.dom.TypeDeclaration;
 
 public class Main {
 	
-	private static int declarationCount = 0;
-	private static int referenceCount = 0;
+	public static int declarationCount = 0;
+	public static int referenceCount = 0;
 	private static String typeName;
 	private static String packageName;
 	private static String importName;
